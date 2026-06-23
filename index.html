@@ -775,6 +775,8 @@
                     <i data-lucide="send" class="w-4 h-4"></i>
                     Send Message
                 </button>
+
+                <p id="form-status-k2l3" class="hidden text-sm font-medium"></p>
             </form>
 
             <p class="text-xs text-navy/40 mt-4 text-center md:text-left">
@@ -1157,13 +1159,71 @@ function renderClasses(filterState) {
 <script>
     // ===== CONTACT FORM =====
     const contactForm = document.getElementById('contact-form-u1v2');
-    const toast = document.getElementById('toast-g3h4');
+    const submitBtn = document.getElementById('submit-btn-e1f2');
+    const formStatus = document.getElementById('form-status-k2l3');
 
     if (contactForm) {
-        contactForm.addEventListener('submit', function(e) {
-            // Let Formspree handle the submission naturally
-            // Show a toast message to confirm user action
-            showToast();
+        contactForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            if (formStatus) {
+                formStatus.classList.add('hidden');
+                formStatus.textContent = '';
+            }
+
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.classList.add('opacity-70', 'cursor-not-allowed');
+            }
+
+            try {
+                const response = await fetch(contactForm.action, {
+                    method: 'POST',
+                    body: new FormData(contactForm),
+                    headers: {
+                        Accept: 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    contactForm.reset();
+                    showToast();
+
+                    if (formStatus) {
+                        formStatus.classList.remove('hidden', 'text-red-700');
+                        formStatus.classList.add('text-navy');
+                        formStatus.textContent = 'Thanks. Your message was sent successfully.';
+                    }
+                } else {
+                    let errorMessage = 'Sorry, we could not send your message right now. Please try again.';
+
+                    try {
+                        const data = await response.json();
+                        if (data && Array.isArray(data.errors) && data.errors.length > 0) {
+                            errorMessage = data.errors.map(err => err.message).join(' ');
+                        }
+                    } catch (parseError) {
+                        // Keep default error message when response is not JSON.
+                    }
+
+                    if (formStatus) {
+                        formStatus.classList.remove('hidden', 'text-navy');
+                        formStatus.classList.add('text-red-700');
+                        formStatus.textContent = errorMessage;
+                    }
+                }
+            } catch (error) {
+                if (formStatus) {
+                    formStatus.classList.remove('hidden', 'text-navy');
+                    formStatus.classList.add('text-red-700');
+                    formStatus.textContent = 'Network error. Please check your connection and try again.';
+                }
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.classList.remove('opacity-70', 'cursor-not-allowed');
+                }
+            }
         });
     }
 </script>
