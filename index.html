@@ -731,6 +731,8 @@
         <!-- CONTACT FORM -->
         <div class="fade-up max-w-2xl mx-auto bg-white rounded-2xl shadow-sm p-6 sm:p-8 md:p-10">
             <form id="contact-form-u1v2" action="https://formspree.io/f/xykanyzw" method="POST" class="space-y-5">
+                <input type="hidden" name="_subject" value="Connected Warriors Contact Form Submission" />
+                <input type="hidden" name="_replyto" id="replyto-hidden-m4n5" value="" />
 
                 <!-- Name + Email -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -1159,6 +1161,8 @@ function renderClasses(filterState) {
 <script>
     // ===== CONTACT FORM =====
     const contactForm = document.getElementById('contact-form-u1v2');
+    const emailInput = document.getElementById('email-input-y5z6');
+    const replyToHidden = document.getElementById('replyto-hidden-m4n5');
     const submitBtn = document.getElementById('submit-btn-e1f2');
     const formStatus = document.getElementById('form-status-k2l3');
 
@@ -1177,9 +1181,15 @@ function renderClasses(filterState) {
             }
 
             try {
+                if (replyToHidden && emailInput) {
+                    replyToHidden.value = emailInput.value.trim();
+                }
+
+                const formData = new FormData(contactForm);
+
                 const response = await fetch(contactForm.action, {
                     method: 'POST',
-                    body: new FormData(contactForm),
+                    body: formData,
                     headers: {
                         Accept: 'application/json'
                     }
