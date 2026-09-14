@@ -12,6 +12,7 @@ permissions:
 
 jobs:
   build_and_deploy_job:
+    if: github.event_name != 'pull_request' || github.event.action != 'closed'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -19,7 +20,11 @@ jobs:
       - name: Inject commit SHA version stamp
         run: |
           SHORT_SHA="${GITHUB_SHA::7}"
-          sed -i "s/__DEPLOY_SHA__/${SHORT_SHA}/g" index.html
+          if grep -q "__DEPLOY_SHA__" index.html; then
+            sed -i "s/__DEPLOY_SHA__/${SHORT_SHA}/g" index.html
+          else
+            sed -i "s#</head>#  <meta name=\"deploy-sha\" content=\"${SHORT_SHA}\" />\n</head>#" index.html
+          fi
 
       - name: Resolve Azure SWA deployment token
         id: resolve_swa_token
@@ -50,3 +55,29 @@ jobs:
           api_location: ''
           output_location: ''
           skip_app_build: true
+
+  close_pull_request_job:
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve Azure SWA deployment token
+        id: resolve_swa_token
+        env:
+          AZURE_STATIC_WEB_APPS_API_TOKEN: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          AZURE_STATIC_WEB_APPS_API_TOKEN_BLUE_FIELD_03CF3F80F: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_BLUE_FIELD_03CF3F80F }}
+        run: |
+          token="${AZURE_STATIC_WEB_APPS_API_TOKEN:-$AZURE_STATIC_WEB_APPS_API_TOKEN_BLUE_FIELD_03CF3F80F}"
+          if [ -n "$token" ]; then
+            echo "has_token=true" >> "$GITHUB_OUTPUT"
+            echo "token=$token" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_token=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Azure SWA deployment token is unavailable for this pull_request close run; skipping environment cleanup."
+          fi
+
+      - name: Close Pull Request Preview Environment
+        if: steps.resolve_swa_token.outputs.has_token == 'true'
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ steps.resolve_swa_token.outputs.token }}
+          action: 'close'
