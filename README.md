@@ -10,9 +10,10 @@ This site is intended to be deployed to Azure Static Web Apps.
 The workflow file is located at `.github/workflows/azure-static-web-apps.yml`.
 
 ### Deployment settings
-- `app_location`: `.`
+- `app_location`: `/`
 - `api_location`: ``
-- `output_location`: `.`
+- `output_location`: ``
+- `skip_app_build`: `true`
 
 ### Notes
 - The site is static HTML/CSS/JS.
