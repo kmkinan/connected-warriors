@@ -6,47 +6,52 @@ on:
       - main
   pull_request:
     types: [opened, synchronize, reopened, closed]
+    branches:
+      - main
 
 permissions:
   contents: read
+  actions: read
+  pull-requests: write
 
 jobs:
-  build_and_deploy_job:
+  build_and_deploy:
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
     runs-on: ubuntu-latest
+    name: Build and deploy to Azure Static Web Apps
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Inject commit SHA version stamp
+      - name: Verify static site files exist
+        shell: bash
+        run: |
+          ls -la
+          test -f index.html
+
+      - name: Inject short SHA stamp
+        shell: bash
         run: |
           SHORT_SHA="${GITHUB_SHA::7}"
-          sed -i "s/__DEPLOY_SHA__/${SHORT_SHA}/g" index.html
-
-      - name: Resolve Azure SWA deployment token
-        id: resolve_swa_token
-        env:
-          AZURE_STATIC_WEB_APPS_API_TOKEN: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
-          AZURE_STATIC_WEB_APPS_API_TOKEN_BLUE_FIELD_03CF3F80F: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_BLUE_FIELD_03CF3F80F }}
-        run: |
-          token="${AZURE_STATIC_WEB_APPS_API_TOKEN:-$AZURE_STATIC_WEB_APPS_API_TOKEN_BLUE_FIELD_03CF3F80F}"
-          if [ -n "$token" ]; then
-            echo "has_token=true" >> "$GITHUB_OUTPUT"
-            echo "token=$token" >> "$GITHUB_OUTPUT"
-          elif [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
-            echo "has_token=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::Azure SWA deployment token is unavailable for this pull_request run; skipping deploy."
-          else
-            echo "::error::Azure SWA deployment token is not configured."
-            exit 1
+          if [ -f index.html ]; then
+            sed -i "s/__DEPLOY_SHA__/${SHORT_SHA}/g" index.html || true
           fi
 
-      - name: Build and Deploy to Azure Static Web Apps
-        if: steps.resolve_swa_token.outputs.has_token == 'true'
+      - name: Deploy to Azure Static Web Apps
+        if: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN != '' }}
         uses: Azure/static-web-apps-deploy@v1
         with:
-          azure_static_web_apps_api_token: ${{ steps.resolve_swa_token.outputs.token }}
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: 'upload'
           app_location: '/'
           api_location: ''
           output_location: ''
           skip_app_build: true
+
+      - name: Fail if Azure deployment token is missing
+        if: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN == '' }}
+        shell: bash
+        run: |
+          echo "::error::AZURE_STATIC_WEB_APPS_API_TOKEN is not configured in GitHub repository secrets."
+          exit 1
