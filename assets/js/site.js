@@ -164,32 +164,63 @@ function renderClasses(activeState = 'ALL') {
     ? classData
     : classData.filter((item) => item.state === activeState);
 
-  classGrid.innerHTML = visibleClasses.map((item) => `
-    <article class="class-card">
-      <span class="class-chip">${item.state} · ${item.programType}</span>
-      <h3>${item.city}</h3>
-      <div class="class-meta">
-        <div>
-          <strong>Location</strong>
-          <span>${item.location}</span>
-        </div>
-        <div>
-          <strong>Schedule</strong>
-          <span>${item.schedule}</span>
-        </div>
-      </div>
-      <p class="class-note">${item.note}</p>
-    </article>
-  `).join('');
+  classGrid.replaceChildren();
+
+  visibleClasses.forEach((item) => {
+    const card = document.createElement('article');
+    card.className = 'class-card';
+
+    const chip = document.createElement('span');
+    chip.className = 'class-chip';
+    chip.textContent = `${item.state} · ${item.programType}`;
+
+    const title = document.createElement('h3');
+    title.textContent = item.city;
+
+    const meta = document.createElement('div');
+    meta.className = 'class-meta';
+
+    const locationGroup = document.createElement('div');
+    const locationLabel = document.createElement('strong');
+    locationLabel.textContent = 'Location';
+    const locationValue = document.createElement('span');
+    locationValue.textContent = item.location;
+    locationGroup.append(locationLabel, locationValue);
+
+    const scheduleGroup = document.createElement('div');
+    const scheduleLabel = document.createElement('strong');
+    scheduleLabel.textContent = 'Schedule';
+    const scheduleValue = document.createElement('span');
+    scheduleValue.textContent = item.schedule;
+    scheduleGroup.append(scheduleLabel, scheduleValue);
+
+    meta.append(locationGroup, scheduleGroup);
+
+    const note = document.createElement('p');
+    note.className = 'class-note';
+    note.textContent = item.note;
+
+    card.append(chip, title, meta, note);
+    classGrid.append(card);
+  });
 
   classSummary.textContent = `${visibleClasses.length} class listing${visibleClasses.length === 1 ? '' : 's'} shown${activeState === 'ALL' ? '' : ` for ${activeState}`}.`;
 }
 
 function renderFilters() {
   const states = ['ALL', ...new Set(classData.map((item) => item.state).sort())];
-  filterRoot.innerHTML = states.map((state, index) => `
-    <button type="button" data-state="${state}" class="${index === 0 ? 'is-active' : ''}">${state === 'ALL' ? 'All states' : state}</button>
-  `).join('');
+  filterRoot.replaceChildren();
+
+  states.forEach((state, index) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.dataset.state = state;
+    button.textContent = state === 'ALL' ? 'All states' : state;
+    if (index === 0) {
+      button.classList.add('is-active');
+    }
+    filterRoot.append(button);
+  });
 
   filterRoot.addEventListener('click', (event) => {
     const button = event.target.closest('button[data-state]');
