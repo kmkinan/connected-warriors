@@ -10,10 +10,12 @@ This site is intended to be deployed to Azure Static Web Apps.
 The workflow file is located at `.github/workflows/azure-static-web-apps.yml`.
 
 ### Deployment settings
-- `app_location`: `.`
+- `app_location`: `/`
 - `api_location`: ``
-- `output_location`: `.`
+- `output_location`: ``
 
 ### Notes
 - The site is static HTML/CSS/JS.
+- The canonical deployment entry point is the root `/index.html` file.
+- The rebuilt site assets live under `assets/css/`, `assets/js/`, and `assets/images/`.
 - If you want to make the contact form functional, use Azure Functions or a form endpoint service.
